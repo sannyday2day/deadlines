@@ -1,0 +1,1184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Deadlines</title>
+<meta name="theme-color" content="#0f1115">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Deadlines">
+<style>
+:root{ color-scheme:dark;
+  --bg:#0f1115; --panel:#161922; --panel2:#1d2130; --line:#272c3b; --text:#e6e8ee; --muted:#8b92a6;
+  --accent:#7aa2f7; --red:#f7768e; --amber:#e0af68; --green:#9ece6a; --purple:#bb9af7;
+}
+*{box-sizing:border-box;scrollbar-width:thin;scrollbar-color:#2c3245 transparent;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--text);font:14px/1.4 system-ui,-apple-system,"Segoe UI",Inter,sans-serif;display:flex;flex-direction:column}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--accent)}
+
+/* ---------- header ---------- */
+header{display:flex;align-items:center;gap:10px;padding:12px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap;padding-top:max(12px,env(safe-area-inset-top))}
+h1{font-size:17px;margin:0 6px 0 0;font-weight:650;white-space:nowrap}
+#range{font-weight:600;font-size:15px;min-width:180px;margin-left:4px;white-space:nowrap}
+.spacer{flex:1}
+.btn{background:var(--panel2);border:1px solid var(--line);padding:6px 12px;border-radius:8px;cursor:pointer;white-space:nowrap;text-decoration:none;color:var(--text);display:inline-flex;align-items:center;gap:6px}
+.btn:hover{border-color:#3d4560}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.primary{background:var(--accent);color:#0f1115;border-color:transparent;font-weight:600}
+.btn.danger{color:var(--red)}
+.btn.sm{padding:4px 9px;font-size:12px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{background:transparent;border:0;color:var(--muted);padding:6px 12px;cursor:pointer}
+.seg button.on{background:var(--panel2);color:var(--text)}
+
+#syncBtn .sd{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+#syncBtn.s-ok .sd{background:var(--green)}
+#syncBtn.s-syncing .sd{background:var(--accent);animation:pulse 1s ease-in-out infinite}
+#syncBtn.s-offline .sd{background:var(--amber)}
+#syncBtn.s-error .sd{background:var(--red)}
+@keyframes pulse{50%{opacity:.3}}
+
+.quick{position:relative;flex:1 1 300px;max-width:480px}
+#qa{width:100%;padding:8px 12px 8px 34px;background:var(--panel);border:1px solid var(--line);border-radius:10px;outline:none}
+#qa:focus{border-color:var(--accent)}
+.quick .ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;font-weight:700}
+#qprev{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;display:none;z-index:20;font-size:12.5px;box-shadow:0 12px 32px #000a}
+.quick:focus-within #qprev{display:block}
+#qprev .pv{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
+#qprev .pv b{font-size:13.5px}
+.k{color:var(--muted)}
+#qprev .cname{color:var(--c);font-weight:600}
+#qprev .ex{color:var(--muted);line-height:1.8}
+#qprev .ex code{background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--text);cursor:pointer}
+#qprev .warn{color:var(--amber)}
+
+#filters{display:flex;gap:6px;flex-wrap:wrap;padding:10px 20px 0;align-items:center}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:4px 10px 4px 6px;border-radius:999px;border:1px solid var(--line);background:var(--panel);font-size:12px;cursor:pointer;user-select:none;white-space:nowrap}
+.pill.off{opacity:.35;text-decoration:line-through}
+.pill .dot{width:14px;height:14px;border-radius:50%;background:var(--c);position:relative;overflow:hidden;flex:none}
+.pill .dot input{position:absolute;inset:-6px;opacity:0;cursor:pointer}
+.pill .cnt{color:var(--muted);font-size:11px}
+
+/* ---------- calendar ---------- */
+main{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 340px;min-height:0}
+#cal{padding:12px 20px 16px;overflow:auto;display:flex;flex-direction:column;gap:6px}
+.dow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.1em;padding:0 4px}
+.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;flex:1;grid-auto-rows:minmax(150px,1fr)}
+.grid.v-month{grid-auto-rows:minmax(105px,1fr)}
+.grid.shrink-first{grid-template-rows:minmax(100px,auto) minmax(150px,1fr)}
+.cell{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px;cursor:pointer;min-width:0;overflow:hidden;transition:border-color .1s,background .1s}
+.cell:hover{border-color:#343b52}
+.cell.past{opacity:.5}
+.cell.past:hover{opacity:.8}
+.cell.out{opacity:.3}
+.cell.weekend{background:#14161e}
+.cell.today{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);opacity:1}
+.cell.over,.droppable.over{border-style:dashed;border-color:var(--accent);background:var(--panel2);opacity:1}
+.cell .d{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);min-height:22px}
+.cell .d b{font-size:16px;color:var(--text);font-weight:600}
+.cell.today .d b{color:var(--accent)}
+.badge{background:var(--accent);color:#0f1115;font-weight:700;font-size:10px;padding:1px 6px;border-radius:999px;text-transform:uppercase;letter-spacing:.05em}
+.cell .plus{margin-left:auto;width:22px;height:22px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--muted);cursor:pointer;opacity:0;transition:opacity .1s;line-height:1;padding:0;font-size:15px}
+.cell:hover .plus{opacity:1}
+.cell .plus:hover{color:var(--text);border-color:var(--accent)}
+.items{display:flex;flex-direction:column;gap:5px;overflow:auto;min-height:0}
+
+.chip{--c:var(--accent);display:flex;gap:7px;align-items:flex-start;background:color-mix(in srgb,var(--c) 13%,var(--panel2));border-left:3px solid var(--c);border-radius:6px;padding:6px 7px;cursor:grab;font-size:12.5px;min-width:0;transition:opacity .15s}
+.chip:hover{background:color-mix(in srgb,var(--c) 22%,var(--panel2))}
+.chip:active{cursor:grabbing}
+.chip.dragging{opacity:.35}
+.chip input{margin:2px 0 0;accent-color:var(--c);cursor:pointer;flex:none}
+.chip .b{min-width:0;flex:1}
+.chip .course{color:var(--c);font-weight:600;font-size:11px;line-height:1.25}
+.chip .title{word-wrap:break-word;margin-top:1px}
+.chip .meta{display:flex;gap:6px;align-items:center;margin-top:4px}
+.chip .time{color:var(--muted);font-size:11px}
+.chip .notes{color:var(--muted);font-size:11.5px;margin-top:4px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line}
+.chip.done{opacity:.4}.chip.done .title{text-decoration:line-through}
+.chip.late:not(.done){box-shadow:inset 0 0 0 1px #f7768e77}
+.v-month .chip{padding:3px 6px;font-size:12px;align-items:center}
+.v-month .chip .course,.v-month .chip .meta,.v-month .chip .notes{display:none}
+.v-month .chip .title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0}
+.v-month .chip input{margin:0}
+@keyframes flash{0%{box-shadow:0 0 0 3px var(--c)}100%{box-shadow:0 0 0 0 transparent}}
+.flash{animation:flash 1.4s ease-out}
+
+.tag{font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:1px 5px;border-radius:4px;flex:none}
+.t-due{background:#f7768e26;color:var(--red)}
+.t-quiz{background:#e0af6826;color:var(--amber)}
+.t-exam{background:#bb9af726;color:var(--purple)}
+.t-task{background:#9ece6a26;color:var(--green)}
+
+/* ---------- sidebar / list ---------- */
+aside{border-left:1px solid var(--line);padding:16px;overflow:auto;display:flex;flex-direction:column;gap:20px;background:#12141b}
+aside h2{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:0 0 8px;display:flex;justify-content:space-between;align-items:center;font-weight:600}
+aside h2 .n{background:var(--panel2);border-radius:999px;padding:1px 8px;letter-spacing:0}
+#overdueBox h2{color:var(--red)}
+.grp{font-size:11px;color:var(--muted);margin:12px 0 6px;font-weight:600}
+.grp:first-child{margin-top:0}
+
+.hero{--c:var(--accent);background:linear-gradient(135deg,color-mix(in srgb,var(--c) 22%,var(--panel)) 0%,var(--panel) 75%);border:1px solid color-mix(in srgb,var(--c) 35%,var(--line));border-radius:12px;padding:14px}
+.hero .when{display:flex;align-items:baseline;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.hero .big{font-size:26px;font-weight:750;letter-spacing:-.01em}
+.hero .date{color:var(--muted);font-size:12.5px}
+.hero .hi{display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-top:1px solid #ffffff10;cursor:pointer}
+.hero .hi:hover .ht{text-decoration:underline}
+.hero .hi input{accent-color:var(--c2);margin-top:3px;cursor:pointer}
+.hero .hc{font-size:11px;font-weight:600;color:var(--c2)}
+.hero .ht{font-size:13.5px}
+
+.row{--c:var(--accent);display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:8px;background:var(--panel);border-left:3px solid var(--c);cursor:pointer;margin-bottom:6px}
+.row:hover{background:var(--panel2)}
+.row input{accent-color:var(--c);cursor:pointer;flex:none}
+.row .rb{min-width:0;flex:1}
+.row .rc{font-size:11px;color:var(--c);font-weight:600;display:flex;gap:6px;align-items:center}
+.row .rt{font-size:13px}
+.row.done .rt{text-decoration:line-through;color:var(--muted)}
+.row .when{font-size:12px;white-space:nowrap;color:var(--muted);text-align:right;line-height:1.3}
+.row .when small{font-size:10.5px;opacity:.8}
+.hot{color:var(--red)!important;font-weight:600}
+.warm{color:var(--amber)!important}
+.empty{color:var(--muted);font-size:12.5px;font-style:italic;padding:6px 2px}
+.droppable{border:1px dashed transparent;border-radius:10px;padding:2px;min-height:34px}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:600;margin-bottom:8px;list-style:none}
+details summary::-webkit-details-marker{display:none}
+details summary::before{content:'▸ '}
+details[open] summary::before{content:'▾ '}
+.tools{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto;padding-top:10px;border-top:1px solid var(--line)}
+.hint{color:var(--muted);font-size:11.5px;line-height:1.6}
+kbd{background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:0 4px;font-size:10.5px;font-family:inherit}
+
+#fab{display:none}
+
+/* ---------- dialogs ---------- */
+dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:0;width:min(500px,94vw);max-height:92vh}
+dialog::backdrop{background:#0009;backdrop-filter:blur(2px)}
+#form,.dbody{padding:20px;display:flex;flex-direction:column;gap:12px}
+dialog h3{margin:0 0 2px;font-size:16px}
+dialog p{margin:0;line-height:1.5}
+label,.field{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted)}
+label.check{flex-direction:row;align-items:center;gap:8px;color:var(--text);font-size:13px;cursor:pointer}
+input:not([type=checkbox]):not([type=color]):not([type=radio]),textarea{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;color:var(--text);width:100%}
+dialog input:focus,dialog textarea:focus{outline:none;border-color:var(--accent)}
+textarea{resize:vertical;min-height:80px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cbtns{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
+.cbtn{--c:var(--accent);font-size:11.5px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);background:none;cursor:pointer;color:var(--muted)}
+.cbtn:hover{color:var(--c);border-color:color-mix(in srgb,var(--c) 50%,var(--line))}
+.cbtn.on{color:var(--c);border-color:var(--c);background:color-mix(in srgb,var(--c) 12%,transparent)}
+.tseg{display:flex;gap:6px}
+.tseg label{flex:1;flex-direction:row;justify-content:center;padding:7px 0;border:1px solid var(--line);border-radius:8px;cursor:pointer;color:var(--muted);font-size:12.5px;font-weight:600}
+.tseg input{display:none}
+.tseg label:has(input:checked){color:var(--text);border-color:currentColor}
+.tseg label.t-due:has(input:checked){color:var(--red);background:#f7768e18}
+.tseg label.t-quiz:has(input:checked){color:var(--amber);background:#e0af6818}
+.tseg label.t-exam:has(input:checked){color:var(--purple);background:#bb9af718}
+.tseg label.t-task:has(input:checked){color:var(--green);background:#9ece6a18}
+.tseg label.tag{background:none;text-transform:none;letter-spacing:0;font-size:12.5px;padding:7px 0;border-radius:8px}
+.qd{display:flex;gap:5px;flex-wrap:wrap;margin-top:-4px}
+.qd button{font-size:11.5px;padding:3px 9px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);cursor:pointer;color:var(--muted)}
+.qd button:hover{color:var(--text);border-color:#3d4560}
+.datehint{font-size:11.5px;color:var(--muted);min-height:16px;margin-top:-6px}
+.actions{display:flex;gap:8px;align-items:center;margin-top:4px;flex-wrap:wrap}
+input[type=date],input[type=time]{color-scheme:dark}
+.steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:12px;line-height:1.5}
+.tok{display:flex;gap:8px;margin-top:6px}
+.err{color:var(--red);font-size:12.5px;min-height:1em}
+.ok{color:var(--green)}
+
+#toast{position:fixed;bottom:max(18px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(120px);background:var(--panel2);border:1px solid var(--line);padding:9px 14px;border-radius:10px;display:flex;gap:14px;align-items:center;transition:transform .2s,opacity .2s;opacity:0;pointer-events:none;font-size:13px;z-index:30;box-shadow:0 8px 24px #0009;max-width:90vw}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1;pointer-events:auto}
+#toast button{background:none;border:0;color:var(--accent);cursor:pointer;font-weight:600}
+
+/* ---------- tablet ---------- */
+@media (max-width:1000px){
+  main{grid-template-columns:1fr;overflow:auto}
+  aside{border-left:0;border-top:1px solid var(--line);overflow:visible}
+  #cal{overflow:visible}
+}
+/* ---------- phone ---------- */
+@media (max-width:700px){
+  header{padding:10px 12px;gap:8px}
+  h1{font-size:16px;margin-right:auto}
+  #add,.desk{display:none}
+  .quick{order:10;flex:1 1 100%;max-width:none}
+  #qa{padding:10px 12px 10px 34px;font-size:16px}
+  #filters{flex-wrap:nowrap;overflow-x:auto;padding:8px 12px 2px}
+  #filters::-webkit-scrollbar{display:none}
+  #range{min-width:0;font-size:14px}
+  body.listmode #cal,body.listmode .navbits{display:none!important}
+  body.listmode aside{border-top:0}
+  aside{padding:12px 12px calc(90px + env(safe-area-inset-bottom));background:var(--bg)}
+  #cal{padding:8px 8px 12px}
+  .dow{gap:3px;font-size:9.5px;letter-spacing:.04em;padding:0}
+  .grid,.grid.v-month{gap:3px;grid-auto-rows:minmax(64px,auto)}
+  .cell{padding:4px;border-radius:7px;gap:3px}
+  .cell .d{min-height:0}
+  .cell .d b{font-size:12.5px}
+  .cell .d span,.cell .plus,.badge{display:none}
+  .v-month .chip{padding:1px 3px;font-size:9.5px;border-left-width:2px;border-radius:3px}
+  .v-month .chip input{display:none}
+  .hint{display:none}
+  .row{padding:10px 12px}
+  .row input,.hero .hi input{width:18px;height:18px}
+  #fab{display:flex;position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:16px;border:0;background:var(--accent);color:#0f1115;font-size:28px;align-items:center;justify-content:center;box-shadow:0 8px 24px #000a;z-index:25;cursor:pointer}
+  #toast{bottom:calc(86px + env(safe-area-inset-bottom))}
+  dialog{width:100vw;max-width:100vw;margin:auto 0 0;border-radius:16px 16px 0 0;max-height:94vh}
+  #form,.dbody{padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
+  dialog input:not([type=checkbox]):not([type=radio]),dialog textarea{font-size:16px}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>📅 Deadlines</h1>
+  <span class="navbits" style="display:contents">
+    <button class="btn" id="prev" title="Previous (←)">‹</button>
+    <button class="btn" id="today" title="Jump to today (T)">Today</button>
+    <button class="btn" id="next" title="Next (→)">›</button>
+    <span id="range"></span>
+  </span>
+  <div class="quick">
+    <span class="ico">+</span>
+    <input id="qa" autocomplete="off" spellcheck="false" enterkeyhint="done" placeholder="Quick add… e.g. “pak quiz fri”">
+    <div id="qprev"></div>
+  </div>
+  <span class="spacer desk"></span>
+  <div class="seg" id="views"></div>
+  <button class="btn" id="syncBtn" title="Sync"><span class="sd"></span><span class="stxt">Sync</span></button>
+  <button class="btn primary" id="add" title="New item (N)">+ Add</button>
+</header>
+<div id="filters"></div>
+<main>
+  <section id="cal">
+    <div class="dow"><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div></div>
+    <div class="grid" id="grid"></div>
+  </section>
+  <aside>
+    <div id="overdueBox"><h2>Overdue <span class="n" id="overdueN"></span></h2><div id="overdue"></div></div>
+    <div><h2>Next up</h2><div id="hero"></div></div>
+    <div><h2>After that <span class="n" id="upN"></span></h2><div id="upcoming"></div></div>
+    <div><h2>No date yet <span class="n" id="nodateN"></span></h2><div id="nodate" class="droppable"></div></div>
+    <details id="doneBox"><summary>Completed <span id="doneN"></span></summary><div id="doneList"></div></details>
+    <div class="tools">
+      <button class="btn sm" id="clearDone">Clear completed</button>
+      <button class="btn sm" id="export">Export</button>
+      <button class="btn sm" id="import">Import</button>
+      <button class="btn sm danger" id="reset">Reset</button>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+    </div>
+    <div class="hint">
+      <kbd>/</kbd> quick add · <kbd>N</kbd> full form · <kbd>←</kbd><kbd>→</kbd> move · <kbd>T</kbd> today · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> views · <kbd>Z</kbd> undo<br>
+      Click a day to add · click an item to edit · drag items between days.
+    </div>
+  </aside>
+</main>
+<button id="fab" title="Add">+</button>
+
+<dialog id="dlg">
+  <form id="form" autocomplete="off">
+    <h3 id="dlgTitle">New item</h3>
+    <label>What<input name="title" required placeholder="e.g. Lab report 4"></label>
+    <div class="field">Course
+      <input name="course" list="courseList" placeholder="Pick one below or type a new one">
+      <div class="cbtns" id="cbtns"></div>
+    </div>
+    <div class="field">Type
+      <div class="tseg">
+        <label class="t-due"><input type="radio" name="type" value="due">Due</label>
+        <label class="t-quiz"><input type="radio" name="type" value="quiz">Quiz</label>
+        <label class="t-exam"><input type="radio" name="type" value="exam">Exam</label>
+        <label class="t-task"><input type="radio" name="type" value="task">To-do</label>
+      </div>
+    </div>
+    <div class="two">
+      <label>Date<input type="date" name="date"></label>
+      <label>Time (optional)<input type="time" name="time"></label>
+    </div>
+    <div class="qd">
+      <button type="button" data-q="today">Today</button>
+      <button type="button" data-q="tom">Tomorrow</button>
+      <button type="button" data-q="+1">+1 day</button>
+      <button type="button" data-q="+7">+1 week</button>
+      <button type="button" data-q="none">No date</button>
+    </div>
+    <div class="datehint" id="datehint"></div>
+    <label>Notes<textarea name="notes" rows="4" placeholder="Details, rules, where to submit…"></textarea></label>
+    <label class="check"><input type="checkbox" name="done"> Done</label>
+    <div class="actions">
+      <button type="button" class="btn danger" id="del">Delete</button>
+      <button type="button" class="btn" id="dup">Duplicate</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn" id="cancel">Cancel</button>
+      <button type="submit" class="btn primary">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="syncDlg">
+  <div class="dbody">
+    <h3>☁ Sync between devices</h3>
+    <div id="syncOff" style="display:flex;flex-direction:column;gap:12px">
+      <p class="k">Your calendar gets saved to a secret Gist on your GitHub account, so your phone and laptop show the same stuff. Works offline too — changes sync when you're back online.</p>
+      <ol class="steps">
+        <li><a href="https://github.com/settings/tokens/new?scopes=gist&description=Deadlines%20sync" target="_blank" rel="noopener"><b>Create a GitHub token →</b></a><br>
+          <span class="k">The <b>gist</b> box is already ticked — don't tick anything else. Set Expiration to <b>No expiration</b>, hit <b>Generate token</b> at the bottom, and copy it.</span></li>
+        <li>Paste it here:
+          <div class="tok"><input id="tokIn" type="password" placeholder="ghp_…" autocomplete="off" spellcheck="false"><button class="btn primary" id="connectBtn">Connect</button></div></li>
+        <li><span class="k">On your other devices: open the app, tap ☁ Sync, paste the <b>same token</b>. Keep it somewhere (notes app / password manager).</span></li>
+      </ol>
+      <div class="err" id="syncErr"></div>
+    </div>
+    <div id="syncOn" style="display:flex;flex-direction:column;gap:10px">
+      <p><span class="ok">✓ Connected</span> as <b id="syncLogin"></b></p>
+      <p class="k" id="syncWhen"></p>
+      <div class="actions">
+        <button class="btn" id="syncNow">Sync now</button>
+        <a class="btn" id="gistLink" target="_blank" rel="noopener">View raw data</a>
+      </div>
+      <p class="k">To add another device: open the app there, tap ☁ Sync, paste the same token.</p>
+      <div class="actions"><button class="btn danger sm" id="disconnect">Disconnect this device</button></div>
+    </div>
+    <div class="actions"><span class="spacer"></span><button class="btn" id="syncClose">Close</button></div>
+  </div>
+</dialog>
+
+<datalist id="courseList"></datalist>
+<div id="toast"><span id="toastMsg"></span><button id="undo">Undo</button></div>
+
+<script>
+const KEY = 'deadlines.v1';
+const TYPES = {due:'Due', quiz:'Quiz', exam:'Exam', task:'To-do'};
+const PALETTE = ['#f7768e','#7aa2f7','#9ece6a','#e0af68','#bb9af7','#7dcfff','#ff9e64','#73daca','#f4a3c4','#c0caf5'];
+
+// Starting list, from the CR's class-updates image (sent Sat 14 Nov 2026)
+const SEED = [
+  {course:'Functional English', type:'quiz', date:'2026-11-19', title:'2 quizzes',
+   notes:"One question from the last class's slides, one from the most recent class's slides."},
+  {course:'ICT Theory', type:'quiz', date:'2026-11-19', title:'Quiz on the last lecture', notes:''},
+  {course:'Pak Studies', type:'quiz', date:'2026-11-20', title:'Quiz: Constitution',
+   notes:'What is a Constitution, why a state requires one, importance of a Constitution.'},
+  {course:'Pak Studies', type:'due', date:'2026-11-20', title:'Assignment: Does Pakistan need new provinces?',
+   notes:'Yes or no — justify your claim with pragmatic examples. 1200–1500 words.\nWrite it in Word, submit as a HARD COPY.'},
+  {course:'ICT Lab', type:'due', date:'2026-11-20', title:'Lab reports 1, 4, 5, 6 on LMS',
+   notes:"LMS upload is a must, even if you emailed it to sir. Portal is open.\nNo hard copies. No Lab Report 7.\nLab 1 is optional — skip it and you get 25 marks.\nOnly submit reports for labs you actually attended."},
+  {course:'ICT Theory', type:'due', date:'2026-11-30', title:'Assignment on LMS',
+   notes:'Due end of month. Everything on loose sheets, except the last part, which is done in Word.'},
+  {course:'Engineering Drawing', type:'due', date:'2026-11-13', title:'Project proposal',
+   notes:"Was due Fri 13 Nov — submit if you haven't."},
+  {course:'Quran', type:'due', date:'', title:'Quran assignment', notes:'Guidelines are in the documents channel.'},
+  {course:'Quran', type:'task', date:'', title:'Semester project', notes:'Guidelines are in the documents channel.'},
+];
+
+// One-off fixes applied to data already saved in a browser
+const MIGRATIONS = [
+  s => { // English quizzes moved Mon 16 → Thu 19 Nov
+    const it = s.items.find(i => i.course === 'Functional English' && i.date === '2026-11-16' && /quiz/i.test(i.title));
+    if (it) it.date = '2026-11-19';
+  },
+  s => { // sync bookkeeping
+    s.deleted = s.deleted || {};
+    s.colorsAt = s.colorsAt || 0;
+    s.items.forEach(i => { i.updated = i.updated || 1; });
+  },
+];
+
+/* ---------- utils ---------- */
+const $ = s => document.querySelector(s);
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-3);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2, '0');
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parse = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const startOfWeek = d => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); return addDays(x, -((x.getDay() + 6) % 7)); };
+const diffDays = (a, b) => Math.round((parse(b) - parse(a)) / 864e5);
+const todayStr = () => iso(new Date());
+const fmt = (d, o) => d.toLocaleDateString('en-GB', o);
+const shortDate = ds => fmt(parse(ds), {weekday:'short', day:'numeric', month:'short'});
+const narrowMQ = matchMedia('(max-width:700px)');
+
+function rel(n) {
+  if (n === 0) return 'Today';
+  if (n === 1) return 'Tomorrow';
+  if (n === -1) return 'Yesterday';
+  if (n < 0) return `${-n} days ago`;
+  return `in ${n} days`;
+}
+function relLate(n) { return n === -1 ? '1 day late' : n < 0 ? `${-n} days late` : rel(n); }
+const urgency = n => n === null ? '' : n <= 1 ? 'hot' : n <= 3 ? 'warm' : '';
+function ago(ts) {
+  const s = Math.round((Date.now() - ts) / 1000);
+  return s < 45 ? 'just now' : s < 3600 ? `${Math.round(s / 60)} min ago` : s < 86400 ? `${Math.round(s / 3600)} h ago` : `${Math.round(s / 86400)} days ago`;
+}
+
+/* ---------- state ---------- */
+function migrate(s) {
+  s.v = s.v || 0;
+  while (s.v < MIGRATIONS.length) MIGRATIONS[s.v++](s);
+  return s;
+}
+function fresh() {
+  return {v: MIGRATIONS.length, items: SEED.map(x => ({id: uid(), done: false, time: '', updated: 1, ...x})),
+          deleted: {}, colors: {}, colorsAt: 0, hidden: [], view: '2wk', mview: 'list'};
+}
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY));
+    if (s && Array.isArray(s.items)) {
+      const st = migrate({colors: {}, hidden: [], view: '2wk', mview: 'list', ...s});
+      localStorage.setItem(KEY, JSON.stringify(st));
+      return st;
+    }
+  } catch {}
+  return fresh();
+}
+let state = load();
+let anchor = new Date();
+let editing = null;
+let undoSnap = null;
+let flashId = null;
+const saveLocal = () => localStorage.setItem(KEY, JSON.stringify(state));
+const save = () => { saveLocal(); scheduleSync(); };
+const find = id => state.items.find(i => i.id === id);
+const touch = it => { it.updated = Date.now(); };
+const tombstone = id => { state.deleted[id] = Date.now(); };
+
+function color(course) {
+  const c = course || 'General';
+  if (!state.colors[c]) {
+    const used = new Set(Object.values(state.colors));
+    state.colors[c] = PALETTE.find(p => !used.has(p)) || PALETTE[Object.keys(state.colors).length % PALETTE.length];
+    saveLocal();
+  }
+  return state.colors[c];
+}
+const courses = () => [...new Set(state.items.map(i => i.course || 'General'))].sort();
+const visible = it => !state.hidden.includes(it.course || 'General');
+const byTime = (a, b) => (a.time || '99').localeCompare(b.time || '99') || a.title.localeCompare(b.title);
+const byDate = (a, b) => a.date.localeCompare(b.date) || byTime(a, b);
+const isLate = it => !it.done && it.date && it.date < todayStr();
+const isNarrow = () => narrowMQ.matches;
+const getView = () => isNarrow() ? (state.mview || 'list') : (state.view === 'list' ? '2wk' : state.view || '2wk');
+function setView(v) { if (isNarrow()) state.mview = v; else state.view = v; saveLocal(); render(); }
+
+// replace the whole list (import/reset) in a way that syncs: old items get tombstoned
+function replaceAll(items) {
+  const now = Date.now(), keep = new Set(items.map(i => i.id));
+  state.items.forEach(i => { if (!keep.has(i.id)) state.deleted[i.id] = now; });
+  items.forEach(i => { i.updated = now; delete state.deleted[i.id]; });
+  state.items = items;
+}
+
+/* ---------- quick-add parser ---------- */
+const FULLWD = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+const MONTHS = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+const FILLER = new Set(['on','by','at','this','for','due','before','till','until']);
+const wdIndex = t => t.length < 3 ? -1 : FULLWD.findIndex(f => f.startsWith(t));
+const monIndex = t => t.length < 3 ? -1 : MONTHS.findIndex(m => m.startsWith(t));
+const dayNum = t => { const m = t.match(/^(\d{1,2})(st|nd|rd|th)?$/); return m && +m[1] >= 1 && +m[1] <= 31 ? +m[1] : 0; };
+function fixYear(m, d) {
+  const y = new Date().getFullYear();
+  const dt = new Date(y, m, d);
+  return diffDays(todayStr(), iso(dt)) < -60 ? new Date(y + 1, m, d) : dt;
+}
+
+function parseQuick(text) {
+  const raw = text.trim().split(/\s+/).filter(Boolean);
+  const w = raw.map(x => x.toLowerCase().replace(/[.,;!?]+$/, ''));
+  const used = new Set();
+  const take = (...a) => a.forEach(i => used.add(i));
+  const today = parse(todayStr());
+  let date = null, time = '';
+
+  for (let i = 0; i < w.length; i++) {
+    if (used.has(i)) continue;
+    const t = w[i], nx = w[i+1] || '', nx2 = w[i+2] || '';
+    let m;
+    if (!date) {
+      if (t === 'today' || t === 'tonight') { date = today; take(i); continue; }
+      if (['tomorrow','tmr','tmrw','tomo','tmw'].includes(t)) { date = addDays(today, 1); take(i); continue; }
+      if (t === 'eom' || (t === 'end' && nx === 'of' && nx2 === 'month')) {
+        date = new Date(today.getFullYear(), today.getMonth() + 1, 0); take(i); if (t === 'end') take(i+1, i+2); continue;
+      }
+      if (t === 'in' && /^\d+$/.test(nx) && /^(day|days|week|weeks|wk|wks)$/.test(nx2)) {
+        date = addDays(today, +nx * (nx2[0] === 'w' ? 7 : 1)); take(i, i+1, i+2); continue;
+      }
+      if (t === 'next' && wdIndex(nx) >= 0) { date = addDays(startOfWeek(today), 7 + (wdIndex(nx) + 6) % 7); take(i, i+1); continue; }
+      if (t === 'next' && /^(week|wk)$/.test(nx)) { date = addDays(today, 7); take(i, i+1); continue; }
+      if (wdIndex(t) >= 0) { date = addDays(today, (wdIndex(t) - today.getDay() + 7) % 7); take(i); continue; }
+      if ((m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/))) { date = new Date(+m[1], m[2]-1, +m[3]); take(i); continue; }
+      if ((m = t.match(/^(\d{1,2})[\/.-](\d{1,2})(?:[\/.-](\d{2,4}))?$/)) && +m[2] >= 1 && +m[2] <= 12) {
+        date = m[3] ? new Date(m[3].length === 2 ? 2000 + +m[3] : +m[3], m[2]-1, +m[1]) : fixYear(m[2]-1, +m[1]);
+        take(i); continue;
+      }
+      if (dayNum(t) && monIndex(nx) >= 0) { date = fixYear(monIndex(nx), dayNum(t)); take(i, i+1); continue; }
+      if (monIndex(t) >= 0 && dayNum(nx)) { date = fixYear(monIndex(t), dayNum(nx)); take(i, i+1); continue; }
+    }
+    if (!time) {
+      m = t.match(/^(\d{1,2})(?::(\d{2}))?(am|pm)$/);
+      if (!m && /^\d{1,2}(:\d{2})?$/.test(t) && /^(am|pm)$/.test(nx)) { m = (t + nx).match(/^(\d{1,2})(?::(\d{2}))?(am|pm)$/); if (m) take(i+1); }
+      if (m && +m[1] <= 12) { time = `${pad(+m[1] % 12 + (m[3] === 'pm' ? 12 : 0))}:${m[2] || '00'}`; take(i); continue; }
+      if ((m = t.match(/^([01]?\d|2[0-3]):([0-5]\d)$/))) { time = `${pad(+m[1])}:${m[2]}`; take(i); continue; }
+    }
+  }
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const i of [...used]) if (i > 0 && FILLER.has(w[i-1]) && !used.has(i-1)) { used.add(i-1); grew = true; }
+  }
+  w.forEach((x, i) => { if (x === 'due' || x === 'deadline') used.add(i); });
+
+  const has = re => w.some(x => re.test(x));
+  const type = has(/^(quiz|quizzes|quizes)$/) ? 'quiz'
+    : has(/^(exam|exams|test|tests|midterm|midterms|mid|mids|finals|viva)$/) ? 'exam'
+    : has(/^(todo|to-do|study|read|revise|prepare|prep|practice|practise|buy|email|meet|meeting|print)$/) ? 'task'
+    : 'due';
+
+  let course = '', ambiguous = [];
+  const scored = courses().filter(c => c !== 'General').map(c => {
+    const toks = c.toLowerCase().split(/\s+/), idx = [];
+    for (const tk of toks) {
+      const j = w.findIndex((x, k) => !used.has(k) && !idx.includes(k) && x.length >= Math.min(3, tk.length) && tk.startsWith(x));
+      if (j >= 0) idx.push(j);
+    }
+    return {c, idx, s: idx.length, r: idx.length / toks.length};
+  }).filter(x => x.s).sort((a, b) => b.s - a.s || b.r - a.r);
+  if (scored.length) {
+    const top = scored[0], ties = scored.filter(x => x.s === top.s && x.r === top.r);
+    if (ties.length === 1) {
+      course = top.c;
+      const firstFree = w.findIndex((_, k) => !used.has(k));
+      const sorted = [...top.idx].sort((a, b) => a - b);
+      if (sorted.every((k, n) => k === firstFree + n)) take(...top.idx);
+    } else ambiguous = ties.map(x => x.c);
+  }
+
+  let title = raw.filter((_, i) => !used.has(i)).join(' ').trim();
+  if (!title) title = TYPES[type];
+  title = title[0].toUpperCase() + title.slice(1);
+  return {title, course, type, date: date ? iso(date) : '', time, ambiguous};
+}
+
+/* ---------- rendering ---------- */
+function chip(it) {
+  const el = document.createElement('div');
+  el.className = 'chip' + (it.done ? ' done' : '') + (isLate(it) ? ' late' : '') + (it.id === flashId ? ' flash' : '');
+  el.style.setProperty('--c', color(it.course));
+  el.draggable = true;
+  el.title = [it.course, it.title, it.notes].filter(Boolean).join('\n');
+  el.innerHTML = `<input type="checkbox" ${it.done ? 'checked' : ''} title="Mark done">
+    <div class="b">
+      <div class="course">${esc(it.course || 'General')}</div>
+      <div class="title">${esc(it.title)}</div>
+      <div class="meta"><span class="tag t-${it.type}">${TYPES[it.type] || it.type}</span>${it.time ? `<span class="time">${esc(it.time)}</span>` : ''}</div>
+      ${it.notes ? `<div class="notes">${esc(it.notes)}</div>` : ''}
+    </div>`;
+  wireItem(el, it);
+  return el;
+}
+
+function row(it, {late = false} = {}) {
+  const el = document.createElement('div');
+  el.className = 'row' + (it.done ? ' done' : '') + (it.id === flashId ? ' flash' : '');
+  el.style.setProperty('--c', color(it.course));
+  el.draggable = true;
+  const n = it.date ? diffDays(todayStr(), it.date) : null;
+  const when = it.date
+    ? `<span class="${it.done ? '' : urgency(n)}">${late ? relLate(n) : rel(n)}</span><br><small>${shortDate(it.date)}${it.time ? ' ' + esc(it.time) : ''}</small>`
+    : '';
+  el.innerHTML = `<input type="checkbox" ${it.done ? 'checked' : ''} title="Mark done">
+    <div class="rb"><div class="rc">${esc(it.course || 'General')} <span class="tag t-${it.type}">${TYPES[it.type] || it.type}</span></div>
+    <div class="rt">${esc(it.title)}</div></div>
+    <div class="when">${when}</div>`;
+  wireItem(el, it);
+  return el;
+}
+
+function wireItem(el, it) {
+  const cb = el.querySelector('input');
+  cb.addEventListener('click', e => e.stopPropagation());
+  cb.addEventListener('change', () => toggleDone(it.id, cb.checked));
+  el.addEventListener('click', e => { e.stopPropagation(); openEditor(find(it.id) || it); });
+  el.addEventListener('dragstart', e => {
+    e.dataTransfer.setData('text/plain', it.id); e.dataTransfer.effectAllowed = 'move';
+    requestAnimationFrame(() => el.classList.add('dragging'));
+  });
+  el.addEventListener('dragend', () => el.classList.remove('dragging'));
+}
+
+function toggleDone(id, done) {
+  const it = find(id); if (!it) return;
+  snapshot(done ? `✓ Done: ${it.title}` : `Reopened: ${it.title}`);
+  it.done = done; touch(it); save(); render();
+}
+
+function dropTarget(el, date) {
+  el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('over'); });
+  el.addEventListener('dragleave', e => { if (!el.contains(e.relatedTarget)) el.classList.remove('over'); });
+  el.addEventListener('drop', e => {
+    e.preventDefault(); el.classList.remove('over');
+    const it = find(e.dataTransfer.getData('text/plain'));
+    if (it && it.date !== date) {
+      snapshot(date ? `Moved “${it.title}” to ${shortDate(date)}` : `“${it.title}” now has no date`);
+      it.date = date; touch(it); flashId = it.id; save(); render();
+    }
+  });
+}
+
+function viewRange() {
+  if (getView() === 'month') {
+    const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
+    const last = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
+    const start = startOfWeek(first);
+    return {start, rows: Math.ceil((diffDays(iso(start), iso(last)) + 1) / 7), month: first.getMonth(), first, last};
+  }
+  const start = startOfWeek(anchor);
+  return {start, rows: getView() === 'week' ? 1 : 2, month: null};
+}
+function inView(ds) {
+  if (getView() === 'list') return true;
+  const r = viewRange();
+  if (r.month !== null) return ds >= iso(r.first) && ds <= iso(r.last);
+  return ds >= iso(r.start) && ds <= iso(addDays(r.start, r.rows * 7 - 1));
+}
+
+function renderGrid() {
+  const view = getView();
+  const grid = $('#grid');
+  grid.innerHTML = '';
+  if (view === 'list') return;
+  grid.className = 'grid v-' + view;
+  $('.dow').style.display = view === 'month' ? '' : 'none';
+  const {start, rows, month, first} = viewRange();
+  if (month !== null) $('#range').textContent = fmt(first, {month: isNarrow() ? 'short' : 'long', year: 'numeric'});
+  else {
+    const end = addDays(start, rows * 7 - 1);
+    $('#range').textContent = `${fmt(start, {day:'numeric', month:'short'})} – ${fmt(end, {day:'numeric', month:'short', year:'numeric'})}`;
+  }
+  const t = todayStr();
+  if (view === '2wk' && iso(addDays(start, 4)) < t) grid.classList.add('shrink-first');
+  for (let i = 0; i < rows * 7; i++) {
+    const d = addDays(start, i), ds = iso(d);
+    const its = state.items.filter(it => it.date === ds && visible(it)).sort(byTime);
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    if (ds === t) cell.classList.add('today'); else if (ds < t) cell.classList.add('past');
+    if (month !== null && d.getMonth() !== month) cell.classList.add('out');
+    if (d.getDay() === 0 || d.getDay() === 6) cell.classList.add('weekend');
+    const sub = view === 'month'
+      ? ((d.getDate() === 1 || i === 0) ? fmt(d, {month: 'short'}) : '')
+      : fmt(d, {weekday: 'short'}) + ((d.getDate() === 1 || i === 0) ? ' · ' + fmt(d, {month: 'short'}) : '');
+    cell.innerHTML = `<div class="d"><b>${d.getDate()}</b><span>${sub}</span>${ds === t ? '<span class="badge">Today</span>' : ''}<button class="plus" title="Add on this day">+</button></div><div class="items"></div>`;
+    const box = cell.querySelector('.items');
+    its.forEach(it => box.appendChild(chip(it)));
+    cell.addEventListener('click', () => openEditor(null, {date: ds}));
+    dropTarget(cell, ds);
+    grid.appendChild(cell);
+  }
+}
+
+function fill(el, list, emptyMsg, opts) {
+  el.innerHTML = '';
+  if (!list.length && emptyMsg) el.innerHTML = `<div class="empty">${emptyMsg}</div>`;
+  list.forEach(it => el.appendChild(row(it, opts)));
+}
+
+function renderSide() {
+  const t = todayStr();
+  const vis = state.items.filter(visible);
+  const open = vis.filter(it => !it.done);
+  const overdue = open.filter(it => it.date && it.date < t).sort(byDate);
+  const up = open.filter(it => it.date && it.date >= t).sort(byDate);
+  const nodate = open.filter(it => !it.date).sort(byTime);
+  const done = vis.filter(it => it.done).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+  $('#overdueBox').style.display = overdue.length ? '' : 'none';
+  fill($('#overdue'), overdue, '', {late: true});
+  $('#overdueN').textContent = overdue.length;
+
+  const hero = $('#hero');
+  const rest = up.slice();
+  if (up.length) {
+    const d0 = up[0].date, n = diffDays(t, d0);
+    const sameDay = up.filter(i => i.date === d0);
+    rest.splice(0, sameDay.length);
+    hero.innerHTML = `<div class="hero" style="--c:${color(sameDay[0].course)}">
+      <div class="when"><span class="big ${urgency(n)}">${rel(n)}</span><span class="date">${fmt(parse(d0), {weekday:'long', day:'numeric', month:'long'})}</span></div>
+      <div class="hl"></div></div>`;
+    const hl = hero.querySelector('.hl');
+    sameDay.forEach(it => {
+      const r = document.createElement('div');
+      r.className = 'hi';
+      r.style.setProperty('--c2', color(it.course));
+      r.innerHTML = `<input type="checkbox" title="Mark done"><div><div class="hc">${esc(it.course)} · ${TYPES[it.type]}${it.time ? ' · ' + esc(it.time) : ''}</div><div class="ht">${esc(it.title)}</div></div>`;
+      const cb = r.querySelector('input');
+      cb.addEventListener('click', e => e.stopPropagation());
+      cb.addEventListener('change', () => toggleDone(it.id, true));
+      r.addEventListener('click', () => openEditor(it));
+      hl.appendChild(r);
+    });
+  } else hero.innerHTML = '<div class="empty">Nothing coming up 🎉</div>';
+
+  const box = $('#upcoming');
+  box.innerHTML = '';
+  const endThis = iso(addDays(startOfWeek(parse(t)), 6)), endNext = iso(addDays(startOfWeek(parse(t)), 13));
+  [['This week', rest.filter(i => i.date <= endThis)],
+   ['Next week', rest.filter(i => i.date > endThis && i.date <= endNext)],
+   ['Later', rest.filter(i => i.date > endNext)]].forEach(([name, list]) => {
+    if (!list.length) return;
+    const h = document.createElement('div'); h.className = 'grp'; h.textContent = name; box.appendChild(h);
+    list.forEach(it => box.appendChild(row(it)));
+  });
+  if (!rest.length) box.innerHTML = '<div class="empty">Nothing else scheduled</div>';
+  $('#upN').textContent = rest.length;
+
+  fill($('#nodate'), nodate, isNarrow() ? 'Nothing here' : 'Drag items here to remove their date');
+  $('#nodateN').textContent = nodate.length;
+
+  $('#doneBox').style.display = done.length ? '' : 'none';
+  fill($('#doneList'), done, '');
+  $('#doneN').textContent = `(${done.length})`;
+  const allDone = state.items.filter(i => i.done).length;
+  $('#clearDone').textContent = `Clear completed (${allDone})`;
+  $('#clearDone').disabled = !allDone;
+
+  const urgent = overdue.length + up.filter(i => diffDays(t, i.date) <= 1).length;
+  document.title = urgent ? `(${urgent}) Deadlines` : 'Deadlines';
+}
+
+function renderFilters() {
+  const f = $('#filters');
+  f.innerHTML = '';
+  courses().forEach(c => {
+    const n = state.items.filter(i => (i.course || 'General') === c && !i.done).length;
+    const p = document.createElement('span');
+    p.className = 'pill' + (state.hidden.includes(c) ? ' off' : '');
+    p.style.setProperty('--c', color(c));
+    p.title = 'Click to show/hide · click the dot to change colour';
+    p.innerHTML = `<span class="dot"><input type="color" value="${color(c)}"></span>${esc(c)}${n ? ` <span class="cnt">${n}</span>` : ''}`;
+    const ci = p.querySelector('input');
+    ci.addEventListener('click', e => e.stopPropagation());
+    ci.addEventListener('input', () => { state.colors[c] = ci.value; state.colorsAt = Date.now(); save(); render(); });
+    p.addEventListener('click', () => {
+      state.hidden = state.hidden.includes(c) ? state.hidden.filter(x => x !== c) : [...state.hidden, c];
+      saveLocal(); render();
+    });
+    f.appendChild(p);
+  });
+  $('#courseList').innerHTML = courses().map(c => `<option value="${esc(c)}">`).join('');
+}
+
+function renderViews() {
+  const opts = isNarrow() ? [['list','List'],['month','Month']] : [['week','Week'],['2wk','2 Weeks'],['month','Month']];
+  const v = getView();
+  $('#views').innerHTML = opts.map(([k, l]) => `<button data-v="${k}" class="${k === v ? 'on' : ''}">${l}</button>`).join('');
+  $('#views').querySelectorAll('button').forEach(b => b.onclick = () => setView(b.dataset.v));
+  document.body.classList.toggle('listmode', v === 'list');
+}
+
+function render() {
+  renderViews(); renderFilters(); renderGrid(); renderSide();
+  if (flashId) setTimeout(() => { flashId = null; }, 0);
+}
+
+/* ---------- editor ---------- */
+const dlg = $('#dlg'), form = $('#form');
+const F = form.elements;
+
+function syncCourseBtns() {
+  const v = F.course.value.trim().toLowerCase();
+  document.querySelectorAll('.cbtn').forEach(b => b.classList.toggle('on', b.dataset.c.toLowerCase() === v));
+}
+function syncDateHint() {
+  const v = F.date.value;
+  $('#datehint').textContent = v ? `${shortDate(v)} — ${rel(diffDays(todayStr(), v))}` : 'No date — it will sit in “No date yet”';
+}
+
+function openEditor(it, preset = {}) {
+  editing = it;
+  form.reset();
+  $('#dlgTitle').textContent = it ? 'Edit' : 'New item';
+  $('#del').style.display = $('#dup').style.display = it ? '' : 'none';
+  const v = it || {title: '', course: state.lastCourse || '', type: 'due', date: '', time: '', notes: '', done: false, ...preset};
+  F.title.value = v.title;
+  F.course.value = v.course;
+  F.type.value = v.type;
+  F.date.value = v.date;
+  F.time.value = v.time;
+  F.notes.value = v.notes;
+  F.done.checked = v.done;
+  const cb = $('#cbtns');
+  cb.innerHTML = '';
+  courses().filter(c => c !== 'General').forEach(c => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'cbtn'; b.dataset.c = c; b.textContent = c;
+    b.style.setProperty('--c', color(c));
+    b.onclick = () => { F.course.value = c; syncCourseBtns(); };
+    cb.appendChild(b);
+  });
+  syncCourseBtns(); syncDateHint();
+  dlg.showModal();
+  if (!isNarrow()) { F.title.focus(); if (!it) F.title.select(); }
+}
+F.course.addEventListener('input', syncCourseBtns);
+F.date.addEventListener('input', syncDateHint);
+document.querySelectorAll('.qd button').forEach(b => b.onclick = () => {
+  const q = b.dataset.q, base = F.date.value ? parse(F.date.value) : parse(todayStr());
+  F.date.value = q === 'today' ? todayStr() : q === 'tom' ? iso(addDays(parse(todayStr()), 1))
+    : q === 'none' ? '' : iso(addDays(base, +q));
+  syncDateHint();
+});
+
+form.addEventListener('submit', e => {
+  e.preventDefault();
+  const data = {
+    title: F.title.value.trim(),
+    course: F.course.value.trim() || 'General',
+    type: F.type.value || 'due',
+    date: F.date.value,
+    time: F.time.value,
+    notes: F.notes.value.trim(),
+    done: F.done.checked,
+  };
+  if (!data.title) return;
+  snapshot(editing ? `Saved “${data.title}”` : `Added “${data.title}”`);
+  let it = editing && find(editing.id);
+  if (editing && !it) { it = {id: editing.id}; state.items.push(it); delete state.deleted[it.id]; }  // edited something another device deleted
+  if (!it) { it = {id: uid()}; state.items.push(it); }
+  Object.assign(it, data); touch(it);
+  state.lastCourse = data.course;
+  flashId = it.id;
+  if (data.date && !inView(data.date)) anchor = parse(data.date);
+  save(); dlg.close();
+});
+form.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); form.requestSubmit(); } });
+$('#cancel').onclick = () => dlg.close();
+$('#del').onclick = () => {
+  if (!editing) return;
+  snapshot(`Deleted “${editing.title}”`);
+  state.items = state.items.filter(i => i.id !== editing.id);
+  tombstone(editing.id);
+  save(); dlg.close();
+};
+$('#dup').onclick = () => {
+  editing = null;
+  $('#dlgTitle').textContent = 'New item (copy)';
+  $('#del').style.display = $('#dup').style.display = 'none';
+  F.done.checked = false;
+  F.title.focus(); F.title.select();
+};
+dlg.addEventListener('close', () => render());   // also picks up anything sync pulled in while the form was open
+function backdropClose(d) {
+  let down = false;
+  d.addEventListener('mousedown', e => { down = e.target === d; });
+  d.addEventListener('click', e => { if (e.target === d && down) d.close(); });
+}
+backdropClose(dlg);
+
+/* ---------- quick add ---------- */
+const qa = $('#qa'), qprev = $('#qprev');
+const EXAMPLES = ['pak quiz fri', 'ict lab report 7 next mon', 'english presentation 24 nov 10am', 'study for drawing tomorrow'];
+function previewQuick() {
+  const v = qa.value.trim();
+  if (!v) {
+    qprev.innerHTML = `<div class="ex">Type naturally — course, type and date are picked up automatically.<br>Try: ${EXAMPLES.map(x => `<code>${x}</code>`).join(' ')}</div>`;
+    qprev.querySelectorAll('code').forEach(c => c.onmousedown = e => { e.preventDefault(); qa.value = c.textContent; previewQuick(); });
+    return;
+  }
+  const p = parseQuick(v);
+  const courseHtml = p.course
+    ? `<span class="cname" style="--c:${color(p.course)}">${esc(p.course)}</span>`
+    : p.ambiguous.length ? `<span class="warn">${p.ambiguous.map(esc).join(' or ')}?</span>`
+    : `<span class="k">no course</span>`;
+  const when = p.date ? `${shortDate(p.date)} · ${rel(diffDays(todayStr(), p.date))}` : '<span class="k">no date</span>';
+  qprev.innerHTML = `<div class="pv">${courseHtml}<span class="tag t-${p.type}">${TYPES[p.type]}</span><b>${esc(p.title)}</b></div>
+    <div class="pv"><span>📅 ${when}${p.time ? ' · ' + p.time : ''}</span></div>
+    <div class="k">${isNarrow() ? 'Tap Done/Enter to add' : '<kbd>Enter</kbd> add · <kbd>Shift+Enter</kbd> open in full form · <kbd>Esc</kbd> cancel'}</div>`;
+}
+qa.addEventListener('input', previewQuick);
+qa.addEventListener('focus', previewQuick);
+qa.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { qa.value = ''; qa.blur(); return; }
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const v = qa.value.trim();
+  if (!v) return;
+  const p = parseQuick(v);
+  const item = {title: p.title, course: p.course || 'General', type: p.type, date: p.date, time: p.time, notes: '', done: false};
+  qa.value = '';
+  if (e.shiftKey) { qa.blur(); openEditor(null, {...item, course: p.course}); return; }
+  snapshot(`Added “${item.title}”${item.date ? ' on ' + shortDate(item.date) : ' (no date)'}`);
+  const it = {id: uid(), ...item, updated: Date.now()};
+  state.items.push(it);
+  flashId = it.id;
+  if (it.date && !inView(it.date)) anchor = parse(it.date);
+  save(); render();
+  if (isNarrow()) qa.blur(); else previewQuick();
+});
+
+/* ---------- undo ---------- */
+let toastTimer;
+function snapshot(msg) {
+  undoSnap = JSON.stringify(state);
+  $('#toastMsg').textContent = msg;
+  $('#toast').classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $('#toast').classList.remove('show'), 6000);
+}
+$('#undo').onclick = () => {
+  if (!undoSnap) return;
+  const snap = JSON.parse(undoSnap); undoSnap = null;
+  // restore, but stamp everything that changed as "new" so the undo wins when syncing
+  const now = Date.now(), cur = new Map(state.items.map(i => [i.id, JSON.stringify(i)]));
+  const snapIds = new Set(snap.items.map(i => i.id));
+  snap.deleted = {...state.deleted};
+  snap.items.forEach(i => { if (cur.get(i.id) !== JSON.stringify(i)) i.updated = now; delete snap.deleted[i.id]; });
+  state.items.forEach(i => { if (!snapIds.has(i.id)) snap.deleted[i.id] = now; });
+  state = {...snap, hidden: state.hidden, view: state.view, mview: state.mview};
+  save(); render(); $('#toast').classList.remove('show');
+};
+
+/* ---------- sync (secret GitHub Gist) ---------- */
+const SYNC_KEY = 'deadlines.sync', FILE = 'deadlines.json', DESC = 'Deadlines sync (used by the Deadlines app, do not rename)';
+const syncCfg = () => { try { return JSON.parse(localStorage.getItem(SYNC_KEY)); } catch { return null; } };
+const setSyncCfg = c => c ? localStorage.setItem(SYNC_KEY, JSON.stringify(c)) : localStorage.removeItem(SYNC_KEY);
+let syncing = false, syncAgain = false, syncTimer = null, syncStatus = 'off', syncMsg = '';
+
+class SyncError extends Error { constructor(msg, kind) { super(msg); this.kind = kind; } }
+async function gh(token, path, opts = {}) {
+  let r;
+  try {
+    r = await fetch('https://api.github.com' + path, {
+      ...opts, cache: 'no-store',
+      headers: {Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', ...(opts.body ? {'Content-Type': 'application/json'} : {})},
+    });
+  } catch { throw new SyncError("Can't reach GitHub — offline?", 'offline'); }
+  if (r.status === 401) throw new SyncError('GitHub rejected the token — it may be mistyped, expired or revoked.', 'auth');
+  if (r.status === 403 || r.status === 404) {
+    const why = r.status === 404 ? 'not found' : 'forbidden';
+    throw new SyncError(`GitHub said ${why} — make sure the token has the “gist” box ticked.`, 'auth');
+  }
+  if (!r.ok) throw new SyncError(`GitHub error ${r.status}`, 'error');
+  return r.json();
+}
+const payload = s => ({items: s.items, deleted: s.deleted || {}, colors: s.colors || {}, colorsAt: s.colorsAt || 0});
+const ITEM_KEYS = ['id','title','course','type','date','time','notes','done','updated'];
+const sortObj = o => Object.keys(o || {}).sort().map(k => [k, o[k]]);
+const canon = p => JSON.stringify([
+  [...p.items].sort((a, b) => a.id < b.id ? -1 : 1).map(i => ITEM_KEYS.map(k => i[k] ?? null)),
+  sortObj(p.deleted), sortObj(p.colors), p.colorsAt || 0]);
+
+function merge(a, b) {
+  const deleted = {...(b.deleted || {})};
+  for (const [id, t] of Object.entries(a.deleted || {})) deleted[id] = Math.max(t, deleted[id] || 0);
+  const m = new Map();
+  for (const it of [...(b.items || []), ...(a.items || [])]) {
+    const cur = m.get(it.id);
+    if (!cur || (it.updated || 0) > (cur.updated || 0)) m.set(it.id, it);
+  }
+  const items = [...m.values()].filter(it => !(deleted[it.id] >= (it.updated || 0)));
+  const cutoff = Date.now() - 120 * 864e5;
+  for (const id in deleted) if (deleted[id] < cutoff) delete deleted[id];
+  const [older, newer] = (a.colorsAt || 0) >= (b.colorsAt || 0) ? [b, a] : [a, b];
+  return {items, deleted, colors: {...(older.colors || {}), ...(newer.colors || {})}, colorsAt: Math.max(a.colorsAt || 0, b.colorsAt || 0)};
+}
+async function readRemote(g) {
+  const f = g.files && g.files[FILE];
+  if (!f) return {items: [], deleted: {}, colors: {}, colorsAt: 0};
+  const text = f.truncated ? await (await fetch(f.raw_url, {cache: 'no-store'})).text() : f.content;
+  const d = JSON.parse(text);
+  return {items: Array.isArray(d.items) ? d.items : [], deleted: d.deleted || {}, colors: d.colors || {}, colorsAt: d.colorsAt || 0};
+}
+const writeRemote = (c, p) => gh(c.token, `/gists/${c.gistId}`, {method: 'PATCH', body: JSON.stringify({files: {[FILE]: {content: JSON.stringify(p)}}})});
+function applyMerged(m) {
+  // re-merge with current local state so edits made while we were waiting on the network survive
+  const final = merge(payload(state), m);
+  const changed = canon(final) !== canon(payload(state));
+  Object.assign(state, final);
+  saveLocal();
+  if (changed && !dlg.open) render();
+  return canon(final) !== canon(m);   // true → there's still something to push
+}
+
+function setStatus(s, msg = '') {
+  syncStatus = s; syncMsg = msg;
+  const b = $('#syncBtn'), c = syncCfg();
+  b.className = 'btn s-' + s;
+  const label = {off: 'Sync', ok: 'Synced', syncing: 'Syncing…', offline: 'Offline', error: 'Sync error'}[s];
+  b.querySelector('.stxt').textContent = label;
+  b.title = s === 'off' ? 'Sync between your devices' : s === 'ok' ? `Synced ${ago(c.last)}` : msg || label;
+  if ($('#syncDlg').open) renderSyncDlg();
+}
+function scheduleSync(delay = 1200) {
+  if (!syncCfg()) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(sync, delay);
+}
+async function sync() {
+  const c = syncCfg(); if (!c) return;
+  if (syncing) { syncAgain = true; return; }
+  syncing = true; setStatus('syncing');
+  try {
+    const remote = await readRemote(await gh(c.token, `/gists/${c.gistId}`));
+    const merged = merge(payload(state), remote);
+    if (canon(merged) !== canon(remote)) await writeRemote(c, merged);
+    if (applyMerged(merged)) syncAgain = true;
+    c.last = Date.now(); setSyncCfg(c);
+    setStatus('ok');
+  } catch (e) {
+    setStatus(e.kind === 'offline' ? 'offline' : 'error', e.message);
+  } finally {
+    syncing = false;
+    if (syncAgain) { syncAgain = false; scheduleSync(400); }
+  }
+}
+async function connect(token) {
+  const user = await gh(token, '/user');
+  const gists = await gh(token, '/gists?per_page=100');
+  let g = gists.find(x => x.files && x.files[FILE] && (x.description || '').startsWith('Deadlines sync'));
+  let msg;
+  if (g) {
+    const remote = await readRemote(await gh(token, `/gists/${g.id}`));
+    let local = payload(state);
+    const pristine = state.items.every(i => (i.updated || 0) <= 1) && !Object.keys(state.deleted || {}).length;
+    if (pristine) local = {items: [], deleted: {}, colors: {}, colorsAt: 0};      // fresh device: just take the synced list
+    else {   // this device has its own edits: merge, skipping copies of things the synced list already has
+      const key = i => `${i.course}|${i.title}`.toLowerCase();
+      const have = new Set(remote.items.map(key)), ids = new Set(remote.items.map(i => i.id));
+      local = {...local, items: local.items.filter(i => ids.has(i.id) || !have.has(key(i)))};
+    }
+    const merged = merge(local, remote);
+    const cfg = {token, gistId: g.id, login: user.login, last: 0};
+    if (canon(merged) !== canon(remote)) await writeRemote(cfg, merged);
+    state.items = []; state.deleted = {};
+    Object.assign(state, merged);
+    saveLocal(); setSyncCfg(cfg);
+    msg = `Synced — loaded ${merged.items.length} items from your other device(s)`;
+  } else {
+    g = await gh(token, '/gists', {method: 'POST', body: JSON.stringify({description: DESC, public: false, files: {[FILE]: {content: JSON.stringify(payload(state))}}})});
+    setSyncCfg({token, gistId: g.id, login: user.login, last: 0});
+    msg = 'Sync is on — now connect your other devices with the same token';
+  }
+  const c = syncCfg(); c.last = Date.now(); setSyncCfg(c);
+  setStatus('ok'); render();
+  return msg;
+}
+
+const syncDlg = $('#syncDlg');
+function renderSyncDlg() {
+  const c = syncCfg();
+  $('#syncOff').style.display = c ? 'none' : 'flex';
+  $('#syncOn').style.display = c ? 'flex' : 'none';
+  if (c) {
+    $('#syncLogin').textContent = '@' + c.login;
+    $('#gistLink').href = `https://gist.github.com/${c.login}/${c.gistId}`;
+    $('#syncWhen').innerHTML = syncStatus === 'error' || syncStatus === 'offline'
+      ? `<span class="err">${esc(syncMsg)}</span>` : syncStatus === 'syncing' ? 'Syncing…' : `Last synced ${c.last ? ago(c.last) : 'never'}.`;
+  }
+}
+$('#syncBtn').onclick = () => { $('#syncErr').textContent = ''; $('#tokIn').value = ''; renderSyncDlg(); syncDlg.showModal(); };
+$('#syncClose').onclick = () => syncDlg.close();
+backdropClose(syncDlg);
+$('#connectBtn').onclick = async () => {
+  const token = $('#tokIn').value.trim();
+  if (!token) { $('#syncErr').textContent = 'Paste the token first.'; return; }
+  const btn = $('#connectBtn'); btn.disabled = true; btn.textContent = 'Connecting…';
+  $('#syncErr').textContent = '';
+  try {
+    const msg = await connect(token);
+    syncDlg.close();
+    $('#toastMsg').textContent = msg; $('#toast').classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => $('#toast').classList.remove('show'), 6000);
+    undoSnap = null;
+  } catch (e) { $('#syncErr').textContent = e.message || String(e); }
+  btn.disabled = false; btn.textContent = 'Connect';
+};
+$('#tokIn').addEventListener('keydown', e => { if (e.key === 'Enter') $('#connectBtn').click(); });
+$('#syncNow').onclick = () => sync();
+$('#disconnect').onclick = () => {
+  if (!confirm('Stop syncing on this device? Your list stays here, it just stops syncing. Other devices are not affected.')) return;
+  setSyncCfg(null); setStatus('off'); renderSyncDlg();
+};
+
+/* ---------- nav & tools ---------- */
+function step(dir) {
+  if (getView() === 'month') anchor = new Date(anchor.getFullYear(), anchor.getMonth() + dir, 1);
+  else anchor = addDays(anchor, 7 * dir);
+  render();
+}
+$('#prev').onclick = () => step(-1);
+$('#next').onclick = () => step(1);
+$('#today').onclick = () => { anchor = new Date(); render(); };
+$('#add').onclick = $('#fab').onclick = () => openEditor(null);
+dropTarget($('#nodate'), '');
+
+$('#clearDone').onclick = () => {
+  snapshot('Cleared completed items');
+  state.items.filter(i => i.done).forEach(i => tombstone(i.id));
+  state.items = state.items.filter(i => !i.done); save(); render();
+};
+$('#export').onclick = () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], {type: 'application/json'}));
+  a.download = `deadlines-${todayStr()}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+$('#import').onclick = () => $('#importFile').click();
+$('#importFile').onchange = async e => {
+  const file = e.target.files[0]; if (!file) return;
+  try {
+    const s = migrate(JSON.parse(await file.text()));
+    if (!Array.isArray(s.items)) throw new Error('no items');
+    snapshot('Imported ' + file.name);
+    replaceAll(s.items);
+    if (s.colors) { state.colors = {...state.colors, ...s.colors}; state.colorsAt = Date.now(); }
+    save(); render();
+  } catch { alert("That file doesn't look like a deadlines export."); }
+  e.target.value = '';
+};
+$('#reset').onclick = () => {
+  if (!confirm('Wipe everything and go back to the original list from the CR?' + (syncCfg() ? ' (This also resets it on your other synced devices.)' : ''))) return;
+  snapshot('Reset to original list');
+  replaceAll(fresh().items);
+  save(); render();
+};
+
+document.addEventListener('keydown', e => {
+  if (dlg.open || syncDlg.open || e.ctrlKey || e.metaKey || e.altKey || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  const k = e.key.toLowerCase();
+  if (e.key === 'ArrowLeft') step(-1);
+  else if (e.key === 'ArrowRight') step(1);
+  else if (k === 't') { anchor = new Date(); render(); }
+  else if (k === 'n') { e.preventDefault(); openEditor(null); }
+  else if (e.key === '/') { e.preventDefault(); qa.focus(); }
+  else if (k === '1' && !isNarrow()) setView('week');
+  else if (k === '2' && !isNarrow()) setView('2wk');
+  else if (k === '3') setView('month');
+  else if (k === 'z' && undoSnap) $('#undo').click();
+});
+
+narrowMQ.addEventListener('change', render);
+let lastDay = todayStr();
+setInterval(() => {
+  if (todayStr() !== lastDay) { lastDay = todayStr(); render(); }
+  if (document.visibilityState === 'visible') sync();
+}, 45000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') sync(); });
+addEventListener('online', () => sync());
+
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+render();
+if (syncCfg()) { setStatus('ok'); sync(); } else setStatus('off');
+</script>
+</body>
+</html>
